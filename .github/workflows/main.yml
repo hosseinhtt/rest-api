@@ -1,0 +1,33 @@
+name: CI/CD Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+      - name: Build and run Docker containers
+        run: |
+          docker build -t app .
+          docker-compose up -d
+
+      - name: Wait for services to start
+        run: |
+          while ! nc -z localhost 8000; do sleep 1; done
+
+      - name: Run tests and linting
+        run: |
+          docker-compose exec app python manage.py test
+          docker-compose exec app flake8
